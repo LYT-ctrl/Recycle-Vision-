@@ -1,0 +1,18 @@
+# Fichiers Python compilés
+__pycache__/
+*.pyc
+*.pyo
+
+# Modèle entraîné
+model.h5
+
+# Configuration locale
+.env
+*.env
+
+# Fichiers générés par le système
+.DS_Store
+.vscode/
+
+# Cache Docker (si applicable)
+.dockerignore
