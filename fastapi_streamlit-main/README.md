@@ -134,4 +134,4 @@ docker push gcr.io/<nom_du_projet>/fast_api:v0
 
 🚀 Conclusion
 
-Ce projet allie intelligence artificielle, développement web et cloud computing pour fournir une solution efficace de classification des déchets. Grâce à FastAPI et Streamlit, l'application permet une interaction fluide et accessible avec le modèle d'IA, tandis que Docker et GCP assurent une mise en production rapide et scalable.
+Ce projet allie intelligence artificielle, développement web et cloud computing pour fournir une solution efficace de classification des objets recyclables. Grâce à FastAPI et Streamlit, l'application permet une interaction fluide et accessible avec le modèle d'IA, tandis que Docker et GCP assurent une mise en production rapide et scalable.
