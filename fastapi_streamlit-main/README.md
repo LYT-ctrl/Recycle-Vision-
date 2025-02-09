@@ -76,7 +76,7 @@ Affichage du résultat avec indication de recyclabilité.
 
 6️⃣ Dockerisation et Déploiement
 
-Dockerisation de l'application avec FastAPI et Streamlit.
+Dockerisation de l'application avec Docker.
 
 Fichier Dockerfile permettant de :
 
