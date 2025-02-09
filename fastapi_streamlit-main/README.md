@@ -99,11 +99,9 @@ Cloner le dépôt GitHub :
 git clone https://github.com/LYT-ctrl/projet.git
 cd projet
 
-Télécharger uniquement le fichier ZIP :
+Télécharger tous les fichiers :
 
 Aller sur GitHub
-
-Trouver le fichier ta_video.zip
 
 Cliquer dessus et sélectionner Download.
 
