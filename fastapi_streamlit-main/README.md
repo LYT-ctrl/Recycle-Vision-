@@ -1,4 +1,4 @@
-Poubelle Intelligente - Projet de Classification d'objets Recyclables
+Projet de Classification d'objets Recyclables
 
 Objectif du Projet
 
