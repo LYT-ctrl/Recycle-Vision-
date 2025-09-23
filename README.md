@@ -1,269 +1,187 @@
-# RecycleVision ♻️
+# Poubelle Intelligente ♻️
 
-> **Classifieur d’objets pour le tri sélectif** (cardboard, glass, metal, paper, plastic, trash) avec **API FastAPI** et **frontend Streamlit**. Le score de **recyclabilité** est calculé comme $1 - P(\text{trash})$ à partir d’un modèle deep learning (MobileNetV2, softmax 6 classes).
-
-<p align="left">
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-blue" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.110+-teal" />
-  <img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-1.32+-red" />
-  <img alt="TensorFlow" src="https://img.shields.io/badge/TensorFlow-2.x-orange" />
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-ready-2496ED" />
-</p>
+**Classifieur d’objets pour le tri sélectif** (cardboard, glass, metal, paper, plastic, trash) avec **API FastAPI** et **interface Streamlit**.  
+Le score de **recyclabilité** utilisé est la **probabilité que l’objet soit recyclable**, et la décision est **binaire** :  
+**recyclable si probabilité ≥ 50%**, sinon **non recyclable**.
 
 ---
 
-## ✨ Fonctionnalités
+## 📚 Données (Kaggle)
 
-* **6 classes**: `cardboard`, `glass`, `metal`, `paper`, `plastic`, `trash`.
-* **Recyclabilité**: $P(\text{recyclable}) = 1 - P(\text{trash})$ + **seuil** configurable (par défaut `0.60`).
-* **API REST** (`/predict`) qui retourne **label top‑1**, **probabilités par classe**, **recyclable\_prob** et **recyclable** (booléen).
-* **Interface Streamlit**: upload/caméra, affichage des probabilités triées, message clair (recyclable / non recyclable / incertain).
-* **Docker Compose** pour lancer **API + Front** en 1 commande.
+Les données d’entraînement proviennent d’un **dataset public Kaggle** et sont réparties en **6 classes** :
+
+- **Cardboard** : carton et emballages en papier épais  
+- **Glass** : bouteilles, bocaux et objets en verre  
+- **Metal** : canettes, boîtes de conserve, objets métalliques  
+- **Paper** : journaux, magazines, feuilles, emballages papier  
+- **Plastic** : bouteilles, sacs, contenants plastiques  
+- **Trash** : déchets non recyclables / mélanges / non catégorisés
+
+> Les données ont été téléchargées depuis un dataset existant sur Internet.
 
 ---
 
-## 🧱 Architecture
+## 🧠 Modèle (MobileNetV2)
 
-```
-Client (Streamlit)  ──▶  FastAPI (/predict)  ──▶  Modèle (MobileNetV2 softmax 6)
-       ▲                         │                      │
-       └──────────── JSON ◀──────┴────── preprocess ────┘
-```
+Développé avec **TensorFlow/Keras**, pour classifier des images en **6 catégories**.  
+L’entraînement est réalisé dans `entrainement_model.ipynb`.
 
-Réponse JSON typique :
+- **Backbone** : `MobileNetV2` **pré-entraîné ImageNet**, `include_top=False`  
+- **Couches additionnelles** :  
+  - `GlobalAveragePooling2D()`  
+  - `Dense(128, activation="relu")`  
+  - `Dropout(0.5)`  
+  - `Dense(6, activation="softmax")`  
+- **Prétraitement** : redimensionnement **224×224**, **normalisation [0,1]**  
+- **Augmentation** : rotation, zoom, flip (améliore la généralisation)  
+- **Stratégie** : gel initial des couches du backbone  
+- **Optimiseur** : **Adam** (LR ajusté)  
+- **Perte** : **Categorical Crossentropy**  
+- **Métriques** : **Accuracy**  
+- **Export** : modèle sauvegardé en **`.h5`** → `model.h5` (réutilisable pour le déploiement)
 
+### Évaluation
+- Calcul de **val_loss** et **val_accuracy** sur un jeu de validation  
+- Affichage des métriques après entraînement
+
+---
+
+## 🔌 API FastAPI
+
+L’API reçoit une image et renvoie une **estimation de la recyclabilité**.
+
+**Endpoints**
+- `GET /` → message de bienvenue / ping
+- `POST /predict` → reçoit une image (`multipart/form-data`, champ `file`) et retourne la **probabilité de recyclabilité**
+
+**Pipeline côté API**
+1. Lecture de l’image uploadée  
+2. Prétraitement : **resize 224×224**, conversion en **numpy**, **ajout dimension batch**  
+3. **Prédiction** via le modèle entraîné  
+4. **Retour** d’un JSON avec la **probabilité de recyclabilité** et la **décision binaire (≥ 50%)**
+
+**Réponse (exemple)**
 ```json
 {
-  "label": "glass",
-  "confidence": 0.78,
-  "probabilities": {
-    "cardboard": 0.02, "glass": 0.78, "metal": 0.05,
-    "paper": 0.03, "plastic": 0.10, "trash": 0.02
-  },
-  "recyclable_prob": 0.98,
+  "recyclable_prob": 0.87,
   "recyclable": true
 }
 ```
+## 🖥️ Interface Streamlit
+
+- Upload d’image par l’utilisateur  
+- Affichage de l’image uploadée  
+- Envoi de la requête à l’API et **prédiction en temps réel**  
+- Message clair :
+  - **≥ 50%** → *Objet recyclable*  
+  - **< 50%** → *Objet non recyclable*
 
 ---
 
-## 🚀 Démarrage rapide
+## ▶️ Lancer en local (API + Front)
 
-### 1) Local (dev)
-
+### 1) Installer les dépendances
 ```bash
-# 0) Cloner
-git clone <URL_DU_REPO>
-cd recycle-vision
+pip install -r requirements.txt
+```
 
-# 1) (optionnel) venv
-python -m venv .venv && source .venv/bin/activate
 
-# 2) Dépendances
-pip install -r requirements-api.txt
-pip install -r requirements-front.txt
-
-# 3) Lancer l’API
+🖥️ Interface Streamlit
+Upload d’image par l’utilisateur
+Affichage de l’image uploadée
+Envoi de la requête à l’API et prédiction en temps réel
+Message clair :
+≥ 50% → Objet recyclable
+< 50% → Objet non recyclable
+▶️ Lancer en local (API + Front)
+1) Installer les dépendances
+pip install -r requirements.txt
+Exemple de requirements.txt :
+fastapi==0.103.1
+uvicorn
+python-multipart
+tensorflow
+pillow
+streamlit
+2) Démarrer l’API
 uvicorn api:app --reload --port 8000
-
-# 4) Lancer le front
+3) Lancer l’interface Streamlit
 streamlit run frontend.py
-```
+4) Tester
+Ouvrir l’URL locale fournie par Streamlit
+Charger une image d’objet
+Obtenir la classification en temps réel
+🐳 Dockerisation (API)
+Créez un fichier Dockerfile (sans extension) :
+# Utilisation d'une image Python allégée
+FROM python:3.10-slim
 
-> Configure l’URL de l’API côté front via `.streamlit/secrets.toml` :
-
-```toml
-API_URL = "http://localhost:8000/predict"
-```
-
-### 2) Docker (prod/dev)
-
-`docker-compose.yml` (inclus) :
-
-```yaml
-version: "3.8"
-services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    ports: ["8000:8000"]
-    volumes:
-      - ./model.h5:/app/model.h5
-      - ./class_names.json:/app/class_names.json
-  front:
-    build:
-      context: .
-      dockerfile: Dockerfile.front
-    environment:
-      API_URL: http://api:8000/predict
-    ports: ["8501:8501"]
-    depends_on: [api]
-```
-
-➡️ Démarrer :
-
-```bash
-docker compose up --build
-```
-
----
-☁️ Déploiement GCP (Cloud Run)
-### Prérequis
-- **gcloud CLI** installé et connecté : `gcloud auth login`
-- **Projet sélectionné** : `gcloud config set project <PROJECT_ID>`
-- *(Optionnel)* **Région par défaut** : `REGION=europe-west9` *(Paris)* ou `europe-west1` *(Belgique)*
-
-**Activer les APIs :**
-```bash
-gcloud services enable \
-  run.googleapis.com \
-  artifactregistry.googleapis.com \
-  cloudbuild.googleapis.com
-
-REGION=europe-west9
-REPO=recyclevision
-PROJECT_ID=$(gcloud config get-value project)
-
-gcloud artifacts repositories create "$REPO" \
-  --repository-format=docker \
-  --location="$REGION" \
-  --description="RecycleVision images"
-```
-2) Builder & pousser les images Docker
-IMAGE_API=$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/api:latest
-IMAGE_FRONT=$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/front:latest
-
-# API
-docker build -t $IMAGE_API -f Dockerfile.api .
-docker push $IMAGE_API
-
-### 2) Builder & pousser l’image **Front**
-```bash
-# Front
-docker build -t "$IMAGE_FRONT" -f Dockerfile.front .
-docker push "$IMAGE_FRONT"
-```
-### 3) gcloud run deploy recyclevision-api \
-  --image "$IMAGE_API" \
-  --region "$REGION" \
-  --platform managed \
-  --allow-unauthenticated \
-  --port 8000 \
-  --cpu 1 --memory 1Gi \
-  --min-instances 0 --max-instances 5 \
-  --set-env-vars RECYCLABLE_THRESHOLD=0.60
-
-(Pour déployer le front ensuite, tu récupéreras l’URL de l’API avec:)
-API_URL=$(gcloud run services describe recyclevision-api --region "$REGION" --format='value(status.url)')
-
-
-
-# Récupérer l'URL HTTPS publique de l'API
-API_URL="$(gcloud run services describe recyclevision-api \
-  --region "$REGION" \
-  --format='value(status.url)')"
-
-# Déployer le front Streamlit en pointant vers l'API (/predict)
-gcloud run deploy recyclevision-front \
-  --image "$IMAGE_FRONT" \
-  --region "$REGION" \
-  --platform managed \
-  --allow-unauthenticated \
-  --port 8501 \
-  --cpu 1 --memory 1Gi \
-  --min-instances 0 --max-instances 3 \
-  --set-env-vars "API_URL=${API_URL}/predict"
-
-Notes :
-CORS : autorise l’origine Cloud Run du front côté API (ou * en dev).
-Modèle (model.h5) & classes :
-Simple : inclure dans l’image API :
+# Répertoire de travail
 WORKDIR /app
-COPY model.h5 class_names.json /app/
-Scalable : stocker dans Cloud Storage et charger au démarrage (service account rôle Storage Object Viewer).
-Cold start : --min-instances 0 ⇒ latence à froid. Mets 1 pour l’éviter.
-Domaine custom : possible sur le service front depuis la console Cloud Run.
 
+# Dépendances
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
----
-## 📦 API
+# Code
+COPY . .
 
-* **Endpoint**: `POST /predict`
-* **Body**: `multipart/form-data` avec champ `file` (jpg/png)
-* **Exemple**:
+# Exposition du port API
+EXPOSE 8000
 
-```bash
-curl -F "file=@tests/sample.jpg" http://localhost:8000/predict
-```
+# Commande de démarrage
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+Construction de l’image
+docker build -t fast_api:v0 .
+Lancement du conteneur
+docker run -p 8000:8000 fast_api:v0
+API : http://localhost:8000
+Doc Swagger : http://localhost:8000/docs
+☁️ Déploiement sur GCP (GCR + Cloud Run)
+1) Préparer gcloud
+gcloud init
+# -> login, choisir/projeter un projet, créer une config (ex. fastapi)
 
-
-## 🧠 Modèle & Entraînement
-
-* **Backbone**: MobileNetV2 (ImageNet), tête `Dense(6, softmax)`.
-* **Perte**: `sparse_categorical_crossentropy`.
-* **Préproc**: RGB → 224×224 → normalisation `/255`.
-* **Export**: `model.h5` + `class_names.json` (ordre des classes **identique** à l’entraînement).
-
-Script d’entraînement (extrait) :
-
-```python
-# Sauvegarder les classes (ordre) pour l’API
-with open("class_names.json", "w") as f:
-    json.dump(train_ds.class_names, f)
-```
-
-**Recyclabilité**: `recyclable_prob = 1 - P(trash)` ; seuil par défaut `0.60` (ajuster sur validation).
-
----
-
-## 🗂️ Structure du repo
-
-```
-recycle-vision/
-├─ api.py                 # FastAPI (multiclasse + recyclable_prob)
-├─ frontend.py            # Streamlit UI
-├─ train.py               # script d’entraînement (optionnel/notebook)
-├─ model.h5               # (via Git LFS ou Release)
-├─ class_names.json
-├─ requirements-api.txt
-├─ requirements-front.txt
-├─ Dockerfile.api
-├─ Dockerfile.front
-├─ docker-compose.yml
-├─ assets/
-│  ├─ demo.gif            # démo UI
-│  └─ samples/            # images de test
-└─ README.md
-```
-
----
-
-## 📊 Model Card (résumé)
-
-* **Classes**: cardboard, glass, metal, paper, plastic, trash
-* **Métriques**: *à compléter* (accuracy, F1 macro, matrice de confusion)
-* **Seuil recyclabilité**: 0.60 (recommandé; à valider selon dataset)
-* **Limites**: objets très sales, flous, ou non présents dans les données peuvent dégrader la confiance; `plastic` dépend des filières locales.
-
----
-
-## 🧭 Roadmap
-
-* [ ] Top‑3 avec explications (labels + %)
-* [ ] Téléversement batch / dossier
-* [ ] Sauvegarde des requêtes (audit)
-* [ ] Quantization / TFLite (edge)
-* [ ] Déploiement cloud (CI/CD + monitoring)
-
----
-
-## 📄 Licence
-
-MIT (voir `LICENSE`).
-
----
-
-## 🙌 Crédit
-
-Projet réalisé par **Yacine Tigrine** — Vision par Ordinateur & IA. Contributions bienvenues (issues/PR).
+gcloud auth configure-docker
+# -> autorise Docker à pousser vers Container Registry (gcr.io)
+2) Tagger puis pousser l’image vers GCR
+# Remplace <PROJECT_ID> par l'ID de ton projet GCP
+docker tag fast_api:v0 gcr.io/<PROJECT_ID>/fast_api:v0
+docker push gcr.io/<PROJECT_ID>/fast_api:v0
+Dans la console GCP, vérifie que Google Container Registry est activé et que l’image apparaît bien.
+3) Déployer sur Cloud Run
+Depuis la console :
+Ouvrir Cloud Run
+Créer un service → choisir l’image gcr.io/<PROJECT_ID>/fast_api:v0
+Options :
+Région : la plus proche de tes utilisateurs
+Port : 8000
+Accès : Allow unauthenticated invocations (public)
+Créer → récupère l’URL publique
+Ou en CLI :
+gcloud run deploy poubelle-intelligente-api \
+  --image gcr.io/<PROJECT_ID>/fast_api:v0 \
+  --platform managed \
+  --allow-unauthenticated \
+  --port 8000
+🧱 Architecture (vue d’ensemble)
+Utilisateur (Streamlit UI)
+        │ upload image
+        ▼
+     FastAPI  ── preprocess ──► MobileNetV2 (6 classes)
+        │                          │
+        └────── JSON ◄─────────────┘
+                {
+                  "recyclable_prob": p,
+                  "recyclable": p >= 0.5
+                }
+📦 Exemple d’appel API
+curl -X POST "http://localhost:8000/predict" \
+  -F "file=@tests/sample.jpg"
+Réponse attendue :
+{
+  "recyclable_prob": 0.72,
+  "recyclable": true
+}
+📄 Licence
+Ce projet est distribué sous licence MIT (voir LICENSE).
