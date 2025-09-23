@@ -108,7 +108,85 @@ docker compose up --build
 ```
 
 ---
+☁️ Déploiement GCP (Cloud Run)
+### Prérequis
+- **gcloud CLI** installé et connecté : `gcloud auth login`
+- **Projet sélectionné** : `gcloud config set project <PROJECT_ID>`
+- *(Optionnel)* **Région par défaut** : `REGION=europe-west9` *(Paris)* ou `europe-west1` *(Belgique)*
 
+**Activer les APIs :**
+```bash
+gcloud services enable \
+  run.googleapis.com \
+  artifactregistry.googleapis.com \
+  cloudbuild.googleapis.com
+
+REGION=europe-west9
+REPO=recyclevision
+PROJECT_ID=$(gcloud config get-value project)
+
+gcloud artifacts repositories create "$REPO" \
+  --repository-format=docker \
+  --location="$REGION" \
+  --description="RecycleVision images"
+```
+2) Builder & pousser les images Docker
+IMAGE_API=$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/api:latest
+IMAGE_FRONT=$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/front:latest
+
+# API
+docker build -t $IMAGE_API -f Dockerfile.api .
+docker push $IMAGE_API
+
+### 2) Builder & pousser l’image **Front**
+```bash
+# Front
+docker build -t "$IMAGE_FRONT" -f Dockerfile.front .
+docker push "$IMAGE_FRONT"
+```
+### 3) gcloud run deploy recyclevision-api \
+  --image "$IMAGE_API" \
+  --region "$REGION" \
+  --platform managed \
+  --allow-unauthenticated \
+  --port 8000 \
+  --cpu 1 --memory 1Gi \
+  --min-instances 0 --max-instances 5 \
+  --set-env-vars RECYCLABLE_THRESHOLD=0.60
+
+(Pour déployer le front ensuite, tu récupéreras l’URL de l’API avec:)
+API_URL=$(gcloud run services describe recyclevision-api --region "$REGION" --format='value(status.url)')
+
+
+
+# Récupérer l'URL HTTPS publique de l'API
+API_URL="$(gcloud run services describe recyclevision-api \
+  --region "$REGION" \
+  --format='value(status.url)')"
+
+# Déployer le front Streamlit en pointant vers l'API (/predict)
+gcloud run deploy recyclevision-front \
+  --image "$IMAGE_FRONT" \
+  --region "$REGION" \
+  --platform managed \
+  --allow-unauthenticated \
+  --port 8501 \
+  --cpu 1 --memory 1Gi \
+  --min-instances 0 --max-instances 3 \
+  --set-env-vars "API_URL=${API_URL}/predict"
+
+Notes :
+CORS : autorise l’origine Cloud Run du front côté API (ou * en dev).
+Modèle (model.h5) & classes :
+Simple : inclure dans l’image API :
+WORKDIR /app
+COPY model.h5 class_names.json /app/
+Scalable : stocker dans Cloud Storage et charger au démarrage (service account rôle Storage Object Viewer).
+Cold start : --min-instances 0 ⇒ latence à froid. Mets 1 pour l’éviter.
+Domaine custom : possible sur le service front depuis la console Cloud Run.
+
+
+---
 ## 📦 API
 
 * **Endpoint**: `POST /predict`
@@ -119,7 +197,6 @@ docker compose up --build
 curl -F "file=@tests/sample.jpg" http://localhost:8000/predict
 ```
 
----
 
 ## 🧠 Modèle & Entraînement
 
