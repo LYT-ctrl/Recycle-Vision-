@@ -1,187 +1,158 @@
-# Poubelle Intelligente ♻️
+# ♻️ Poubelle Intelligente
 
-**Classifieur d’objets pour le tri sélectif** (cardboard, glass, metal, paper, plastic, trash) avec **API FastAPI** et **interface Streamlit**.  
-Le score de **recyclabilité** utilisé est la **probabilité que l’objet soit recyclable**, et la décision est **binaire** :  
-**recyclable si probabilité ≥ 50%**, sinon **non recyclable**.
+Un projet de classification d’objets recyclables basé sur **MobileNetV2**, déployé avec **FastAPI**, **Streamlit**, **Docker** et **Google Cloud Run**.
 
 ---
 
-## 📚 Données (Kaggle)
-
-Les données d’entraînement proviennent d’un **dataset public Kaggle** et sont réparties en **6 classes** :
-
-- **Cardboard** : carton et emballages en papier épais  
-- **Glass** : bouteilles, bocaux et objets en verre  
-- **Metal** : canettes, boîtes de conserve, objets métalliques  
-- **Paper** : journaux, magazines, feuilles, emballages papier  
-- **Plastic** : bouteilles, sacs, contenants plastiques  
-- **Trash** : déchets non recyclables / mélanges / non catégorisés
-
-> Les données ont été téléchargées depuis un dataset existant sur Internet.
+## 🚀 Objectifs
+Faciliter le tri sélectif grâce à un système intelligent capable de :
+- Classifier des déchets en **6 catégories** à partir d’images.
+- Fournir une prédiction en temps réel via une **API REST** et une **interface utilisateur**.
+- Être déployé en local ou dans le cloud pour une utilisation pratique.
 
 ---
 
-## 🧠 Modèle (MobileNetV2)
+## 📂 Dataset
+Les données proviennent de **Kaggle** et contiennent des images réparties en 6 classes :
+- **Cardboard** : cartons, emballages papier épais.  
+- **Glass** : bouteilles, bocaux, objets en verre.  
+- **Metal** : canettes, boîtes de conserve, objets métalliques.  
+- **Paper** : journaux, magazines, feuilles.  
+- **Plastic** : bouteilles, sacs, objets en plastique.  
+- **Trash** : déchets non recyclables.  
 
-Développé avec **TensorFlow/Keras**, pour classifier des images en **6 catégories**.  
-L’entraînement est réalisé dans `entrainement_model.ipynb`.
+---
 
-- **Backbone** : `MobileNetV2` **pré-entraîné ImageNet**, `include_top=False`  
-- **Couches additionnelles** :  
-  - `GlobalAveragePooling2D()`  
-  - `Dense(128, activation="relu")`  
-  - `Dropout(0.5)`  
-  - `Dense(6, activation="softmax")`  
-- **Prétraitement** : redimensionnement **224×224**, **normalisation [0,1]**  
-- **Augmentation** : rotation, zoom, flip (améliore la généralisation)  
-- **Stratégie** : gel initial des couches du backbone  
-- **Optimiseur** : **Adam** (LR ajusté)  
-- **Perte** : **Categorical Crossentropy**  
-- **Métriques** : **Accuracy**  
-- **Export** : modèle sauvegardé en **`.h5`** → `model.h5` (réutilisable pour le déploiement)
+## 🧠 Modèle
+Le modèle choisi est **MobileNetV2**, pré-entraîné sur **ImageNet**.
 
-### Évaluation
-- Calcul de **val_loss** et **val_accuracy** sur un jeu de validation  
-- Affichage des métriques après entraînement
+### Architecture :
+- `GlobalAveragePooling2D()`  
+- `Dense(128, activation="relu")`  
+- `Dropout(0.5)`  
+- `Dense(6, activation="softmax")`  
+
+### Paramètres d’entraînement :
+- **Redimensionnement** : `224x224`  
+- **Normalisation** : valeurs entre 0 et 1  
+- **Augmentation des données** : rotation, zoom, flip  
+- **Optimiseur** : Adam  
+- **Loss** : Categorical Crossentropy  
+- **Métriques** : Accuracy  
+
+📦 Le modèle est sauvegardé au format **`model.h5`**.
+
+---
+
+## 📊 Résultats
+- Évaluation sur dataset de validation.  
+- Suivi : `val_loss` et `val_accuracy`.  
+- Résultats affichés après entraînement pour mesurer la performance.  
 
 ---
 
 ## 🔌 API FastAPI
+Une API REST permet de tester le modèle.
 
-L’API reçoit une image et renvoie une **estimation de la recyclabilité**.
+### Endpoints :
+- **GET /** → message de bienvenue.  
+- **POST /predict** → upload d’une image et retour de la probabilité de recyclabilité.  
 
-**Endpoints**
-- `GET /` → message de bienvenue / ping
-- `POST /predict` → reçoit une image (`multipart/form-data`, champ `file`) et retourne la **probabilité de recyclabilité**
-
-**Pipeline côté API**
-1. Lecture de l’image uploadée  
-2. Prétraitement : **resize 224×224**, conversion en **numpy**, **ajout dimension batch**  
-3. **Prédiction** via le modèle entraîné  
-4. **Retour** d’un JSON avec la **probabilité de recyclabilité** et la **décision binaire (≥ 50%)**
-
-**Réponse (exemple)**
-```json
-{
-  "recyclable_prob": 0.87,
-  "recyclable": true
-}
-```
-## 🖥️ Interface Streamlit
-
-- Upload d’image par l’utilisateur  
-- Affichage de l’image uploadée  
-- Envoi de la requête à l’API et **prédiction en temps réel**  
-- Message clair :
-  - **≥ 50%** → *Objet recyclable*  
-  - **< 50%** → *Objet non recyclable*
-
----
-
-## ▶️ Lancer en local (API + Front)
-
-### 1) Installer les dépendances
+### Lancer l’API :
 ```bash
-pip install -r requirements.txt
+uvicorn api:app --reload
+```
+
+### 🎨 Interface streamlit : 
+Une interface simple pour interagir avec le modèle.
+Fonctionnalités :
+Upload d’une image.
+Visualisation de l’image.
+Prédiction via l’API.
+Affichage du résultat :
+Probabilité > 50% → objet recyclable ✅
+Sinon → objet non recyclable ❌
+Lancer l’interface :
+
+```bash
+streamlit run frontend.py
 ```
 
 
-🖥️ Interface Streamlit
-Upload d’image par l’utilisateur
-Affichage de l’image uploadée
-Envoi de la requête à l’API et prédiction en temps réel
-Message clair :
-≥ 50% → Objet recyclable
-< 50% → Objet non recyclable
-▶️ Lancer en local (API + Front)
-1) Installer les dépendances
-pip install -r requirements.txt
-Exemple de requirements.txt :
-fastapi==0.103.1
-uvicorn
-python-multipart
-tensorflow
-pillow
-streamlit
-2) Démarrer l’API
-uvicorn api:app --reload --port 8000
-3) Lancer l’interface Streamlit
-streamlit run frontend.py
-4) Tester
-Ouvrir l’URL locale fournie par Streamlit
-Charger une image d’objet
-Obtenir la classification en temps réel
-🐳 Dockerisation (API)
-Créez un fichier Dockerfile (sans extension) :
-# Utilisation d'une image Python allégée
+### 🐳 Dockerisation
+Dockerfile :
+```bash
 FROM python:3.10-slim
 
-# Répertoire de travail
 WORKDIR /app
 
-# Dépendances
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Code
 COPY . .
 
-# Exposition du port API
 EXPOSE 8000
 
-# Commande de démarrage
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
-Construction de l’image
+```
+### construire et lancer l'image : 
+``` bash
 docker build -t fast_api:v0 .
-Lancement du conteneur
 docker run -p 8000:8000 fast_api:v0
-API : http://localhost:8000
-Doc Swagger : http://localhost:8000/docs
-☁️ Déploiement sur GCP (GCR + Cloud Run)
-1) Préparer gcloud
-gcloud init
-# -> login, choisir/projeter un projet, créer une config (ex. fastapi)
+```
 
+API accessible sur : http://localhost:8000
+Documentation interactive : http://localhost:8000/docs
+
+### ☁️ Déploiement sur Google Cloud Run
+
+- 1) Créer un projet GCP et installer gcloud.
+- 2) Authentifier Docker :
+``` bash
 gcloud auth configure-docker
-# -> autorise Docker à pousser vers Container Registry (gcr.io)
-2) Tagger puis pousser l’image vers GCR
-# Remplace <PROJECT_ID> par l'ID de ton projet GCP
-docker tag fast_api:v0 gcr.io/<PROJECT_ID>/fast_api:v0
-docker push gcr.io/<PROJECT_ID>/fast_api:v0
-Dans la console GCP, vérifie que Google Container Registry est activé et que l’image apparaît bien.
-3) Déployer sur Cloud Run
-Depuis la console :
-Ouvrir Cloud Run
-Créer un service → choisir l’image gcr.io/<PROJECT_ID>/fast_api:v0
-Options :
-Région : la plus proche de tes utilisateurs
-Port : 8000
-Accès : Allow unauthenticated invocations (public)
-Créer → récupère l’URL publique
-Ou en CLI :
-gcloud run deploy poubelle-intelligente-api \
-  --image gcr.io/<PROJECT_ID>/fast_api:v0 \
-  --platform managed \
-  --allow-unauthenticated \
-  --port 8000
-🧱 Architecture (vue d’ensemble)
-Utilisateur (Streamlit UI)
-        │ upload image
-        ▼
-     FastAPI  ── preprocess ──► MobileNetV2 (6 classes)
-        │                          │
-        └────── JSON ◄─────────────┘
-                {
-                  "recyclable_prob": p,
-                  "recyclable": p >= 0.5
-                }
-📦 Exemple d’appel API
-curl -X POST "http://localhost:8000/predict" \
-  -F "file=@tests/sample.jpg"
-Réponse attendue :
-{
-  "recyclable_prob": 0.72,
-  "recyclable": true
-}
-📄 Licence
-Ce projet est distribué sous licence MIT (voir LICENSE).
+```
+- 3) Taguer et pousser l’image :
+
+``` bash
+docker tag fast_api:v0 gcr.io/<nom_du_projet>/fast_api:v0
+docker push gcr.io/<nom_du_projet>/fast_api:v0
+```
+- 4) Déployer sur Cloud Run depuis la console :
+
+-- 1) Région proche.
+-- 2) Port 8000.
+-- 3) Autorisations adaptées.
+
+Une URL publique sera générée pour accéder à l’API.
+
+### Installation et utilisation :
+Cloner le repo :
+``` bash
+git clone <URL_DU_REPO>
+cd poubelle-intelligente
+```
+
+Installer les dépendances :
+``` bash
+pip install -r requirements.txt
+```
+
+### Fichiers principaux :
+- entrainement_model.ipynb → entraînement MobileNetV2.
+- api.py → API FastAPI.
+- frontend.py → Interface Streamlit.
+- Dockerfile → déploiement Docker.
+- requirements.txt → dépendances.
+
+### Références : 
+- Dataset Kaggle
+- MobileNetV2 - Paper
+- FastAPI Documentation
+- Streamlit Documentation
+- Google Cloud Run
+
+### Auteur ✍️ 
+Yacine Tigrine  
+Étudiant en Master 2 Ingénierie & Intelligence Artificielle
+
+Université Paris 8
