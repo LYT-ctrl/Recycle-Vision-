@@ -75,14 +75,19 @@ uvicorn api:app --reload
 ```
 
 ### 🎨 Interface streamlit : 
-Une interface simple pour interagir avec le modèle.
-Fonctionnalités :
-Upload d’une image.
-Visualisation de l’image.
-Prédiction via l’API.
-Affichage du résultat :
-Probabilité > 50% → objet recyclable ✅
-Sinon → objet non recyclable ❌
+Une interface simple pour interagir avec le modèle.  
+
+Fonctionnalités :  
+
+- Upload d’une image.
+- Visualisation de l’image.
+- Prédiction via l’API.
+- Affichage du résultat :
+  Probabilité > 50% → objet recyclable ✅
+  Sinon → objet non recyclable ❌
+  
+
+ 
 Lancer l’interface :
 
 ```bash
