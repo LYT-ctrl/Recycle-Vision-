@@ -1,5 +1,15 @@
 # ♻️ Poubelle Intelligente
 
+![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange?logo=tensorflow)
+![Keras](https://img.shields.io/badge/Keras-red?logo=keras)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.103-green?logo=fastapi)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.x-ff4b4b?logo=streamlit)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)
+![Google Cloud](https://img.shields.io/badge/Cloud-Run-4285F4?logo=googlecloud)
+![Kaggle](https://img.shields.io/badge/Dataset-Kaggle-20beff?logo=kaggle)
+
+
 Un projet de classification d’objets recyclables basé sur **MobileNetV2**, déployé avec **FastAPI**, **Streamlit**, **Docker** et **Google Cloud Run**.
 
 ---
