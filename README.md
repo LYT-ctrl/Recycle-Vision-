@@ -172,3 +172,8 @@ Yacine Tigrine
 Étudiant en Master 2 Ingénierie & Intelligence Artificielle
 
 Université Paris 8
+
+
+## 📜 Licence
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
